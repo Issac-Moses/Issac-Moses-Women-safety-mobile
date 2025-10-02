@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Shield, Phone, AlertTriangle, Users, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import useLocation from '../hooks/useLocation'; // ✅ default export
+import useLocation from '../hooks/useLocation'; 
 import EmergencyButton from '../components/EmergencyButton';
 import FakeCall from '../components/FakeCall';
 
@@ -14,6 +14,9 @@ const SafetyPage: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [safeMode, setSafeMode] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
+
+  const SHAKE_THRESHOLD = 11; // adjust this if needed
+  let lastShakeTime = 0;
 
   const addNotification = (message: string) => {
     setNotifications(prev => [...prev, message]);
@@ -74,35 +77,38 @@ const SafetyPage: React.FC = () => {
     }
   };
 
+  // ================== SHAKE DETECTION ==================
+  useEffect(() => {
+    const handleMotion = (event: DeviceMotionEvent) => {
+      if (!event.accelerationIncludingGravity) return;
+
+      const { x = 0, y = 0, z = 0 } = event.accelerationIncludingGravity;
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+      // Debug log
+      console.log('📱 Motion detected:', { x, y, z, magnitude });
+
+      const now = Date.now();
+      if (magnitude > SHAKE_THRESHOLD && now - lastShakeTime > 1000) { // 1 sec debounce
+        console.log('🚨 Shake Triggered!');
+        lastShakeTime = now;
+        triggerGroupAlert(); // you can trigger any alert here
+      }
+    };
+
+    window.addEventListener('devicemotion', handleMotion);
+
+    return () => {
+      window.removeEventListener('devicemotion', handleMotion);
+    };
+  }, [location, user]);
+  // =====================================================
+
   const safetyFeatures = [
-    {
-      icon: Phone,
-      title: 'Fake Call',
-      description: 'Simulate incoming call to escape situations',
-      action: () => setFakeCallActive(true),
-      color: 'bg-blue-500'
-    },
-    {
-      icon: AlertTriangle,
-      title: 'Silent Alert',
-      description: 'Send silent emergency alert to contacts',
-      action: triggerSilentAlert,
-      color: 'bg-orange-500'
-    },
-    {
-      icon: Users,
-      title: 'Group Alert',
-      description: 'Alert all emergency contacts simultaneously',
-      action: triggerGroupAlert,
-      color: 'bg-green-500'
-    },
-    {
-      icon: Shield,
-      title: 'Safe Mode',
-      description: 'Activate all safety features',
-      action: toggleSafeMode,
-      color: safeMode ? 'bg-green-600' : 'bg-gray-500'
-    }
+    { icon: Phone, title: 'Fake Call', description: 'Simulate incoming call to escape situations', action: () => setFakeCallActive(true), color: 'bg-blue-500' },
+    { icon: AlertTriangle, title: 'Silent Alert', description: 'Send silent emergency alert to contacts', action: triggerSilentAlert, color: 'bg-orange-500' },
+    { icon: Users, title: 'Group Alert', description: 'Alert all emergency contacts simultaneously', action: triggerGroupAlert, color: 'bg-green-500' },
+    { icon: Shield, title: 'Safe Mode', description: 'Activate all safety features', action: toggleSafeMode, color: safeMode ? 'bg-green-600' : 'bg-gray-500' }
   ];
 
   return (
@@ -110,12 +116,7 @@ const SafetyPage: React.FC = () => {
       {/* Notifications */}
       <div className="fixed top-20 right-4 z-40 space-y-2">
         {notifications.map((notification, index) => (
-          <div
-            key={index}
-            className={`max-w-sm p-3 rounded-lg shadow-lg ${
-              isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-            } border-l-4 border-orange-500 animate-fadeIn`}
-          >
+          <div key={index} className={`max-w-sm p-3 rounded-lg shadow-lg ${isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} border-l-4 border-orange-500 animate-fadeIn`}>
             <p className="text-sm">{notification}</p>
           </div>
         ))}
@@ -124,35 +125,21 @@ const SafetyPage: React.FC = () => {
       <div className="p-4">
         {/* Emergency SOS */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 mb-6 shadow-lg`}>
-          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-6`}>
-            Emergency SOS
-          </h2>
-          <div className="flex justify-center">
-            <EmergencyButton />
-          </div>
+          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-6`}>Emergency SOS</h2>
+          <div className="flex justify-center"><EmergencyButton /></div>
         </div>
 
         {/* Safety Features */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 mb-6 shadow-lg`}>
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
-            Safety Features
-          </h3>
+          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>Safety Features</h3>
           <div className="grid grid-cols-2 gap-4">
             {safetyFeatures.map((feature, index) => (
-              <button
-                key={index}
-                onClick={feature.action}
-                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} rounded-xl p-4 transition-all duration-200 active:scale-95`}
-              >
+              <button key={index} onClick={feature.action} className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'} rounded-xl p-4 transition-all duration-200 active:scale-95`}>
                 <div className={`w-12 h-12 ${feature.color} rounded-lg flex items-center justify-center mb-3`}>
                   <feature.icon className="w-6 h-6 text-white" />
                 </div>
-                <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-1`}>
-                  {feature.title}
-                </h4>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {feature.description}
-                </p>
+                <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-1`}>{feature.title}</h4>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{feature.description}</p>
               </button>
             ))}
           </div>
@@ -160,76 +147,38 @@ const SafetyPage: React.FC = () => {
 
         {/* Safety Settings */}
         <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-2xl p-6 mb-6 shadow-lg`}>
-          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
-            Safety Settings
-          </h3>
+          <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>Safety Settings</h3>
           <div className="space-y-4">
-            {/* Sound Alerts */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                {soundEnabled ? (
-                  <Volume2 className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                ) : (
-                  <VolumeX className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
-                )}
+                {soundEnabled ? <Volume2 className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} /> : <VolumeX className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />}
                 <div>
-                  <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Sound Alerts
-                  </h4>
-                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Enable sound for emergency alerts
-                  </p>
+                  <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Sound Alerts</h4>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Enable sound for emergency alerts</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  soundEnabled ? 'bg-purple-600' : 'bg-gray-400'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    soundEnabled ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${soundEnabled ? 'bg-purple-600' : 'bg-gray-400'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${soundEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
-            {/* Safe Mode */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Shield className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
                 <div>
-                  <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    Safe Mode
-                  </h4>
-                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Activate all safety features
-                  </p>
+                  <h4 className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Safe Mode</h4>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Activate all safety features</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSafeMode(!safeMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  safeMode ? 'bg-green-600' : 'bg-gray-400'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    safeMode ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
+              <button onClick={() => setSafeMode(!safeMode)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${safeMode ? 'bg-green-600' : 'bg-gray-400'}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${safeMode ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Fake Call Modal */}
-      <FakeCall 
-        isActive={fakeCallActive} 
-        onEnd={() => setFakeCallActive(false)} 
-      />
+      <FakeCall isActive={fakeCallActive} onEnd={() => setFakeCallActive(false)} />
     </div>
   );
 };
