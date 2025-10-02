@@ -22,6 +22,7 @@ const HomePage: React.FC = () => {
   const [notifications, setNotifications] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState('');
 
+  // Determine time of day
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setTimeOfDay('Morning');
@@ -29,6 +30,7 @@ const HomePage: React.FC = () => {
     else setTimeOfDay('Evening');
   }, []);
 
+  // Notifications handler
   const addNotification = (message: string) => {
     setNotifications(prev => [...prev, message]);
     setTimeout(() => {
@@ -36,23 +38,28 @@ const HomePage: React.FC = () => {
     }, 3000);
   };
 
+  // Location sharing
   const shareLocation = async () => {
     addNotification('Location shared with emergency contacts');
   };
 
+  // Alert emergency contacts
   const alertContacts = () => {
     addNotification(`Emergency alert sent to ${user?.emergencyContacts?.length || 0} contacts!`);
   };
 
+  // Safe Mode toggle
   const toggleSafeMode = () => {
     setSafeMode(!safeMode);
     addNotification(
-      safeMode
-        ? 'Safe Mode deactivated'
-        : 'Safe Mode activated - All safety features enabled'
+      !safeMode
+        ? 'Safe Mode activated - All safety features enabled'
+        : 'Safe Mode deactivated'
     );
+    if (!safeMode) getCurrentLocation();
   };
 
+  // Quick actions
   const quickActions = [
     {
       icon: Phone,
@@ -89,6 +96,33 @@ const HomePage: React.FC = () => {
       shadow: safeMode ? 'shadow-green-500/25' : 'shadow-purple-500/25'
     }
   ];
+
+  // 🔴 Shake detection
+  useEffect(() => {
+    const SHAKE_THRESHOLD = 11; // adjust if needed
+    let lastShakeTime = 0;
+
+    const handleMotion = (event: DeviceMotionEvent) => {
+      if (!event.accelerationIncludingGravity) return;
+      const { x = 0, y = 0, z = 0 } = event.accelerationIncludingGravity;
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+      console.log('📱 Motion detected:', { x, y, z, magnitude });
+
+      const now = Date.now();
+      if (safeMode && magnitude > SHAKE_THRESHOLD && now - lastShakeTime > 1000) {
+        console.log('🚨 Shake Triggered!');
+        lastShakeTime = now;
+        alertContacts();
+      }
+    };
+
+    window.addEventListener('devicemotion', handleMotion);
+
+    return () => {
+      window.removeEventListener('devicemotion', handleMotion);
+    };
+  }, [safeMode, user]);
 
   return (
     <div
