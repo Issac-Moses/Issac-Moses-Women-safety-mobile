@@ -13,6 +13,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import useLocation from '../hooks/useLocation';
 
+const SHAKE_THRESHOLD = 12; // Adjust if needed
+let lastShakeTime = 0;
+
 const HomePage: React.FC = () => {
   const { user } = useAuth();
   const { isDark } = useTheme();
@@ -22,7 +25,6 @@ const HomePage: React.FC = () => {
   const [notifications, setNotifications] = useState<string[]>([]);
   const [timeOfDay, setTimeOfDay] = useState('');
 
-  // Determine time of day
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setTimeOfDay('Morning');
@@ -30,7 +32,33 @@ const HomePage: React.FC = () => {
     else setTimeOfDay('Evening');
   }, []);
 
-  // Notifications handler
+  // -----------------------------
+  // Shake Detection
+  // -----------------------------
+  useEffect(() => {
+    const handleMotion = (event: DeviceMotionEvent) => {
+      const acc = event.accelerationIncludingGravity;
+      if (!acc) return;
+      const { x = 0, y = 0, z = 0 } = acc;
+      const magnitude = Math.sqrt(x * x + y * y + z * z);
+
+      if (safeMode && magnitude > SHAKE_THRESHOLD) {
+        const now = Date.now();
+        if (now - lastShakeTime > 1000) { // 1s cooldown
+          lastShakeTime = now;
+          console.log('🚨 Shake Triggered!');
+          triggerSOS();
+        }
+      }
+    };
+
+    window.addEventListener('devicemotion', handleMotion);
+    return () => window.removeEventListener('devicemotion', handleMotion);
+  }, [safeMode, user]);
+
+  // -----------------------------
+  // Notifications
+  // -----------------------------
   const addNotification = (message: string) => {
     setNotifications(prev => [...prev, message]);
     setTimeout(() => {
@@ -38,28 +66,32 @@ const HomePage: React.FC = () => {
     }, 3000);
   };
 
-  // Location sharing
+  // -----------------------------
+  // SOS Trigger
+  // -----------------------------
+  const triggerSOS = () => {
+    addNotification('📞 Emergency call triggered!');
+    const emergencyNumber = user?.emergencyContacts?.[0]?.phone || '100';
+    window.location.href = `tel:${emergencyNumber}`;
+  };
+
   const shareLocation = async () => {
     addNotification('Location shared with emergency contacts');
   };
 
-  // Alert emergency contacts
   const alertContacts = () => {
     addNotification(`Emergency alert sent to ${user?.emergencyContacts?.length || 0} contacts!`);
   };
 
-  // Safe Mode toggle
   const toggleSafeMode = () => {
     setSafeMode(!safeMode);
     addNotification(
-      !safeMode
-        ? 'Safe Mode activated - All safety features enabled'
-        : 'Safe Mode deactivated'
+      safeMode
+        ? 'Safe Mode deactivated'
+        : 'Safe Mode activated - All safety features enabled'
     );
-    if (!safeMode) getCurrentLocation();
   };
 
-  // Quick actions
   const quickActions = [
     {
       icon: Phone,
@@ -96,33 +128,6 @@ const HomePage: React.FC = () => {
       shadow: safeMode ? 'shadow-green-500/25' : 'shadow-purple-500/25'
     }
   ];
-
-  // 🔴 Shake detection
-  useEffect(() => {
-    const SHAKE_THRESHOLD = 11; // adjust if needed
-    let lastShakeTime = 0;
-
-    const handleMotion = (event: DeviceMotionEvent) => {
-      if (!event.accelerationIncludingGravity) return;
-      const { x = 0, y = 0, z = 0 } = event.accelerationIncludingGravity;
-      const magnitude = Math.sqrt(x * x + y * y + z * z);
-
-      console.log('📱 Motion detected:', { x, y, z, magnitude });
-
-      const now = Date.now();
-      if (safeMode && magnitude > SHAKE_THRESHOLD && now - lastShakeTime > 1000) {
-        console.log('🚨 Shake Triggered!');
-        lastShakeTime = now;
-        alertContacts();
-      }
-    };
-
-    window.addEventListener('devicemotion', handleMotion);
-
-    return () => {
-      window.removeEventListener('devicemotion', handleMotion);
-    };
-  }, [safeMode, user]);
 
   return (
     <div
@@ -206,43 +211,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Emergency SOS */}
-        <div className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-red-500/10 via-pink-500/10 to-purple-500/10 border border-red-200/30 rounded-3xl p-8 shadow-2xl">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl"></div>
-          <div className="relative z-10 text-center">
-            <div className="inline-flex items-center justify-center mb-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75"></div>
-                <div className="relative bg-gradient-to-br from-red-500 to-pink-600 rounded-full p-4 shadow-2xl shadow-red-500/50">
-                  <AlertTriangle className="w-8 h-8 text-white" />
-                </div>
-              </div>
-            </div>
-            <h3
-              className={`text-2xl font-bold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              } mb-2`}
-            >
-              Emergency SOS
-            </h3>
-            <p
-              className={`text-sm ${
-                isDark ? 'text-gray-400' : 'text-gray-600'
-              } mb-6`}
-            >
-              Instant help at your fingertips
-            </p>
-            <button className="group relative overflow-hidden bg-gradient-to-r from-red-600 via-pink-600 to-red-600 bg-size-200 bg-pos-0 hover:bg-pos-100 text-white font-bold px-12 py-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-105">
-              <span className="relative z-10 flex items-center space-x-2">
-                <Zap className="w-5 h-5" />
-                <span>TRIGGER SOS</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-0 transition-transform duration-700"></div>
-            </button>
-          </div>
-        </div>
-
         {/* Quick Actions */}
         <div>
           <h3
@@ -287,74 +255,6 @@ const HomePage: React.FC = () => {
             ))}
           </div>
         </div>
-
-        {/* Safety Status */}
-        <div
-          className={`backdrop-blur-xl ${
-            isDark ? 'bg-gray-800/80' : 'bg-white/80'
-          } border border-white/20 rounded-3xl p-6 shadow-2xl`}
-        >
-          <h3
-            className={`text-lg font-bold ${
-              isDark ? 'text-white' : 'text-gray-900'
-            } mb-4 flex items-center`}
-          >
-            <Shield className="w-5 h-5 mr-2 text-green-500" />
-            Safety Status
-          </h3>
-          <div className="space-y-4">
-            {[
-              { label: 'Location Services', status: 'Active', color: 'green' },
-              {
-                label: 'Emergency Contacts',
-                status: `${user?.emergencyContacts?.length || 0} Added`,
-                color: 'blue'
-              },
-              {
-                label: 'Safe Mode',
-                status: safeMode ? 'Enabled' : 'Disabled',
-                color: safeMode ? 'green' : 'gray'
-              }
-            ].map((item, index) => (
-              <div
-                key={index}
-                className={`flex items-center justify-between p-3 rounded-xl ${
-                  isDark ? 'bg-gray-700/50' : 'bg-gray-50'
-                }`}
-              >
-                <span
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}
-                >
-                  {item.label}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      item.color === 'green'
-                        ? 'bg-green-500 animate-pulse'
-                        : item.color === 'blue'
-                        ? 'bg-blue-500 animate-pulse'
-                        : 'bg-gray-400'
-                    }`}
-                  ></div>
-                  <span
-                    className={`text-sm font-bold ${
-                      item.color === 'green'
-                        ? 'text-green-500'
-                        : item.color === 'blue'
-                        ? 'text-blue-500'
-                        : 'text-gray-400'
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <style>{`
@@ -371,9 +271,6 @@ const HomePage: React.FC = () => {
         .animation-delay-2000 { animation-delay: 2s; }
         .animation-delay-4000 { animation-delay: 4s; }
         .animate-slideInRight { animation: slideInRight 0.5s ease-out; }
-        .bg-size-200 { background-size: 200% 100%; }
-        .bg-pos-0 { background-position: 0% 0%; }
-        .bg-pos-100 { background-position: 100% 0%; }
       `}</style>
     </div>
   );
