@@ -1,0 +1,87 @@
+/* Import Leaflet CSS */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');
+
+/* Custom styles for Leaflet in Capacitor/Android */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+  background: transparent;
+}
+
+/* Fix for marker icons */
+.leaflet-default-icon-path {
+  background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png');
+}
+
+/* Fix for touch events on mobile */
+.leaflet-container {
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+/* Custom marker icon fix */
+.leaflet-marker-icon {
+  background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png') !important;
+}
+
+.leaflet-marker-shadow {
+  background-image: url('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png') !important;
+}
+
+/* Responsive map container */
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  min-height: 200px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .map-container {
+    height: 300px;
+  }
+}
+
+/* Loading spinner for maps */
+.map-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+
+/* Dark mode adjustments */
+.dark .leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #60a5fa !important;
+}
+
+.dark .leaflet-popup-content-wrapper {
+  background: #374151 !important;
+  color: white !important;
+}
+
+.dark .leaflet-popup-tip {
+  background: #374151 !important;
+}
+
+/* Fix for zoom controls */
+.leaflet-control-zoom a {
+  color: #333 !important;
+  text-decoration: none !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #f4f4f4 !important;
+  color: #333 !important;
+}
+
+/* Popup styling */
+.
