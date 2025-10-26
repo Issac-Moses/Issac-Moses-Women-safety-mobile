@@ -1,8 +1,10 @@
 # Andhra Mahila Samraksha - Women Safety App
+
 <img src="./src/assets/logo.png" width="450"/>
 - A comprehensive safety application designed to empower women with emergency tools, location tracking, and instant alerts.
-# Screen shots
-# Screen shots
+
+# Screenshots
+
 <p float="left">
   <img src="./screenshots/1.jpg" width="250" />
   <img src="./screenshots/2.jpg" width="250" />
